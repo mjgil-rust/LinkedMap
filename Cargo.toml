@@ -1,0 +1,11 @@
+[package]
+name = "linked_map"
+version = "0.1.0"
+edition = "2021"
+description = "An immutable-style ordered map with cursor navigation and reordering operations."
+license = "MIT"
+repository = "https://github.com/IdeaFlowCo/LinkedMap"
+
+[lib]
+name = "linked_map"
+path = "src/lib.rs"

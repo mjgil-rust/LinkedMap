@@ -8,6 +8,12 @@ struct Item {
     name: &'static str,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct NonClone(&'static str);
+
+#[derive(Debug, PartialEq, Eq)]
+struct NonCloneMapped(&'static str);
+
 fn item(id: i32, name: &'static str) -> Item {
     Item { id, name }
 }
@@ -112,6 +118,14 @@ fn movement_updates_cursor() {
     assert_eq!(linked.move_to_end().prev().current_value(), Some(&value2()));
     assert_eq!(linked.move_to_start().current_value(), Some(&value1()));
     assert_eq!(linked.move_to(&99).current_value(), Some(&value1()));
+}
+
+#[test]
+fn inserting_after_cursor_falls_off_preserves_none_cursor() {
+    let linked = one_linked().move_to_end().next().push(value2(), 2);
+
+    assert_eq!(linked.current_value(), None);
+    assert_eq!(linked.to_vec(), vec![(1, value1()), (2, value2())]);
 }
 
 #[test]
@@ -261,6 +275,14 @@ fn get_between_respects_inclusion_flags() {
 }
 
 #[test]
+fn get_between_with_same_key_matches_source_behavior() {
+    assert_eq!(
+        three_linked().get_between(&2, &2, true, false),
+        linked_map!(2 => value2())
+    );
+}
+
+#[test]
 fn get_after_and_get_before_follow_order() {
     let linked = four_linked();
 
@@ -285,6 +307,14 @@ fn delete_between_respects_inclusion_flags() {
     assert_eq!(
         four_linked().delete_between(&1, &4, true, true),
         empty_linked_map()
+    );
+}
+
+#[test]
+fn delete_between_with_same_key_matches_source_behavior() {
+    assert_eq!(
+        three_linked().delete_between(&2, &2, true, false),
+        linked_map!(1 => value1(), 3 => value3())
     );
 }
 
@@ -322,6 +352,73 @@ fn iter_supports_double_ended_iteration() {
     assert_eq!(iter.next_back(), Some((&3, &value3())));
     assert_eq!(iter.next(), Some((&2, &value2())));
     assert_eq!(iter.next_back(), None);
+}
+
+#[test]
+fn iter_and_values_report_exact_remaining_len() {
+    let linked = three_linked();
+
+    let mut iter = linked.iter();
+    assert_eq!(iter.len(), 3);
+    iter.next();
+    assert_eq!(iter.len(), 2);
+
+    let mut values = linked.values();
+    assert_eq!(values.len(), 3);
+    values.next();
+    assert_eq!(values.len(), 2);
+}
+
+#[test]
+fn read_only_access_works_with_non_clone_values() {
+    let linked = LinkedMap::from_entries([(1, NonClone("one"))]);
+
+    assert_eq!(linked.len(), 1);
+    assert_eq!(linked.get(&1), Some(&NonClone("one")));
+    assert_eq!(linked.current_value(), Some(&NonClone("one")));
+    assert_eq!(
+        linked
+            .iter()
+            .map(|(key, value)| (*key, value.0))
+            .collect::<Vec<_>>(),
+        vec![(1, "one")]
+    );
+}
+
+#[test]
+fn cursor_movement_and_reductions_work_with_non_clone_values() {
+    let linked = LinkedMap::from_entries([(1, NonClone("one")), (2, NonClone("two"))]);
+
+    assert_eq!(linked.move_to_end().current_value(), Some(&NonClone("two")));
+    assert_eq!(
+        linked.move_to_end().prev().current_value(),
+        Some(&NonClone("one"))
+    );
+
+    let reduced = linked.reduce(String::new(), |mut acc, value, key| {
+        acc.push_str(&format!("{key}{}", value.0));
+        acc
+    });
+    let reduced_right = linked.reduce_right(String::new(), |mut acc, value, key| {
+        acc.push_str(&format!("{key}{}", value.0));
+        acc
+    });
+
+    let mut seen = Vec::new();
+    linked.for_each(|value, key| seen.push((*key, value.0)));
+
+    assert_eq!(reduced, "1one2two");
+    assert_eq!(reduced_right, "2two1one");
+    assert_eq!(seen, vec![(1, "one"), (2, "two")]);
+}
+
+#[test]
+fn map_values_accepts_non_clone_input_and_output_types() {
+    let linked = LinkedMap::from_entries([(1, NonClone("one")), (2, NonClone("two"))]);
+    let mapped = linked.map_values(|value, _| NonCloneMapped(value.0));
+
+    assert_eq!(mapped.get(&1), Some(&NonCloneMapped("one")));
+    assert_eq!(mapped.get(&2), Some(&NonCloneMapped("two")));
 }
 
 #[test]

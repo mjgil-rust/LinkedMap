@@ -10,7 +10,7 @@ instance in place.
 
 `LinkedMap` stores:
 
-- `entries`: a `BTreeMap<K, V>` for keyed lookup
+- `entries`: a `BTreeMap<K, Arc<V>>` for keyed lookup with shared value storage
 - `order`: a `Vec<K>` that preserves iteration order and supports relative
   insertion, swapping, slicing, and reversal
 - `current`: an optional key representing the active cursor position
@@ -35,11 +35,12 @@ The public API is adapted to Rust idioms:
   `linked_map!` macro
 - lookups use explicit methods like `get` and `current_value` instead of a
   JavaScript-style optional argument overload
-- values are generic over `K` and `V`, with `K: Ord + Clone` and `V: Clone`
+- most read-only APIs work with any `V`; only materialization helpers like
+  `to_vec` and `to_map` require `V: Clone`
 
 ## Tradeoffs
 
-This implementation favors correctness and a small API surface over structural
-sharing. Operations that change order clone the internal map and order vector.
-That keeps the semantics close to the original project while staying simple and
-predictable in Rust.
+This implementation favors correctness and a small API surface over deeply
+optimized persistent data structures. Shared `Arc<V>` storage avoids cloning
+values for cursor-only copies and read-heavy transformations, while operations
+that change keys or ordering still clone the map structure and order vector.

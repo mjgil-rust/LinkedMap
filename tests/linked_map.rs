@@ -101,6 +101,13 @@ fn get_and_current_value_work() {
 }
 
 #[test]
+fn current_key_reports_cursor_state() {
+    assert_eq!(empty_linked_map().current_key(), None);
+    assert_eq!(three_linked().current_key(), Some(&1));
+    assert_eq!(three_linked().move_to_end().next().current_key(), None);
+}
+
+#[test]
 fn set_and_update_replace_existing_values() {
     let renamed = three_linked().set(&1, item(1, "renamed"));
     let updated = three_linked().update(&2, |value| item(value.id, "twotwo"));
@@ -121,6 +128,15 @@ fn movement_updates_cursor() {
 }
 
 #[test]
+fn next_and_prev_leave_empty_cursor_unchanged() {
+    let after_end = one_linked().move_to_end().next();
+
+    assert_eq!(after_end.current_value(), None);
+    assert_eq!(after_end.next().current_value(), None);
+    assert_eq!(after_end.prev().current_value(), None);
+}
+
+#[test]
 fn inserting_after_cursor_falls_off_preserves_none_cursor() {
     let linked = one_linked().move_to_end().next().push(value2(), 2);
 
@@ -132,6 +148,12 @@ fn inserting_after_cursor_falls_off_preserves_none_cursor() {
 fn clear_returns_an_empty_map() {
     assert_eq!(three_linked().clear(), empty_linked_map());
     assert_eq!(empty_linked_map().clear(), empty_linked_map());
+}
+
+#[test]
+fn pop_and_shift_on_empty_map_are_noops() {
+    assert_eq!(empty_linked_map().pop(), empty_linked_map());
+    assert_eq!(empty_linked_map().shift(), empty_linked_map());
 }
 
 #[test]
@@ -205,6 +227,11 @@ fn remove_and_delete_drop_keys() {
 }
 
 #[test]
+fn remove_missing_key_is_a_noop() {
+    assert_eq!(three_linked().remove(&99), three_linked());
+}
+
+#[test]
 fn shift_and_pop_remove_from_ends() {
     assert_eq!(
         three_linked().shift(),
@@ -260,6 +287,11 @@ fn swap_and_reverse_reorder_without_changing_values() {
 }
 
 #[test]
+fn swap_with_the_same_key_is_a_noop() {
+    assert_eq!(three_linked().swap(&2, &2), three_linked());
+}
+
+#[test]
 fn get_between_respects_inclusion_flags() {
     assert_eq!(
         four_linked().get_between(&1, &4, false, false),
@@ -280,6 +312,16 @@ fn get_between_with_same_key_matches_source_behavior() {
         three_linked().get_between(&2, &2, true, false),
         linked_map!(2 => value2())
     );
+}
+
+#[test]
+fn get_between_with_same_key_excluding_start_is_empty() {
+    assert_eq!(three_linked().get_between(&2, &2, false, true), empty_linked_map());
+}
+
+#[test]
+fn get_between_with_reversed_adjacent_keys_is_empty() {
+    assert_eq!(two_linked().get_between(&2, &1, false, false), empty_linked_map());
 }
 
 #[test]
@@ -315,6 +357,22 @@ fn delete_between_with_same_key_matches_source_behavior() {
     assert_eq!(
         three_linked().delete_between(&2, &2, true, false),
         linked_map!(1 => value1(), 3 => value3())
+    );
+}
+
+#[test]
+fn delete_between_with_same_key_without_delete_start_keeps_contents() {
+    assert_eq!(
+        three_linked().delete_between(&2, &2, false, true),
+        three_linked()
+    );
+}
+
+#[test]
+fn delete_between_with_reversed_adjacent_keys_keeps_contents() {
+    assert_eq!(
+        two_linked().delete_between(&2, &1, false, false),
+        two_linked()
     );
 }
 
@@ -355,6 +413,17 @@ fn iter_supports_double_ended_iteration() {
 }
 
 #[test]
+fn values_support_double_ended_iteration() {
+    let linked = three_linked();
+    let mut values = linked.values();
+
+    assert_eq!(values.next_back(), Some(&value3()));
+    assert_eq!(values.next(), Some(&value1()));
+    assert_eq!(values.next_back(), Some(&value2()));
+    assert_eq!(values.next(), None);
+}
+
+#[test]
 fn iter_and_values_report_exact_remaining_len() {
     let linked = three_linked();
 
@@ -383,6 +452,17 @@ fn read_only_access_works_with_non_clone_values() {
             .collect::<Vec<_>>(),
         vec![(1, "one")]
     );
+}
+
+#[test]
+fn into_iterator_for_reference_yields_entries_in_order() {
+    let linked = three_linked();
+    let entries = (&linked)
+        .into_iter()
+        .map(|(key, value)| (*key, value.clone()))
+        .collect::<Vec<_>>();
+
+    assert_eq!(entries, vec![(1, value1()), (2, value2()), (3, value3())]);
 }
 
 #[test]
@@ -428,4 +508,40 @@ fn extra_insertions_match_the_source_examples() {
 
     let linked = three_linked().insert_before(&1, value5(), 5);
     assert_eq!(linked.first(), Some(&value5()));
+}
+
+#[test]
+fn display_for_non_empty_map_includes_entries() {
+    let rendered = two_linked().to_string();
+
+    assert!(rendered.contains("LinkedMap ["));
+    assert!(rendered.contains("1"));
+    assert!(rendered.contains("one"));
+    assert!(rendered.contains("2"));
+    assert!(rendered.contains("two"));
+}
+
+#[test]
+fn collect_builds_a_linked_map() {
+    let linked: LinkedMap<i32, Item> = [(1, value1()), (2, value2())].into_iter().collect();
+
+    assert_eq!(linked, two_linked());
+}
+
+#[test]
+#[should_panic(expected = "cannot insert duplicate key")]
+fn from_entries_panics_on_duplicate_keys() {
+    let _ = LinkedMap::from_entries([(1, value1()), (1, value2())]);
+}
+
+#[test]
+#[should_panic(expected = "cannot insert duplicate key")]
+fn push_panics_on_duplicate_keys() {
+    let _ = one_linked().push(value2(), 1);
+}
+
+#[test]
+#[should_panic(expected = "item was not found")]
+fn set_panics_on_missing_key() {
+    let _ = one_linked().set(&99, value2());
 }

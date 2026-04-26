@@ -34,6 +34,18 @@ assert_eq!(moved.to_vec(), vec![(1, "one"), (4, "between"), (2, "two"), (3, "thr
 - `move_to`, `move_to_start`, `move_to_end`, `next`, `prev`
 - `iter`, `values`, `reduce`, `reduce_right`
 
+## Coverage
+
+Install `cargo-llvm-cov`, then run:
+
+```bash
+scripts/coverage.sh summary
+scripts/coverage.sh html
+```
+
+The GitHub Actions workflow also runs build, test, and coverage jobs and uploads
+the LCOV report as a workflow artifact.
+
 ## Architecture
 
 Implementation details and design tradeoffs are documented in `ARCHITECTURE.md`.

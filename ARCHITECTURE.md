@@ -44,3 +44,10 @@ This implementation favors correctness and a small API surface over deeply
 optimized persistent data structures. Shared `Arc<V>` storage avoids cloning
 values for cursor-only copies and read-heavy transformations, while operations
 that change keys or ordering still clone the map structure and order vector.
+
+## Tooling
+
+Coverage is generated with `cargo-llvm-cov`. The repository includes a local
+helper script at `scripts/coverage.sh`, and GitHub Actions runs separate build,
+test, and coverage jobs. The coverage job publishes an LCOV artifact for CI
+inspection.

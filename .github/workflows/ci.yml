@@ -49,39 +49,12 @@ jobs:
       - name: Generate coverage summary
         run: |
           mkdir -p target/llvm-cov
-          cargo llvm-cov --workspace --summary-only | tee target/llvm-cov/summary.txt
+          cargo llvm-cov --workspace --summary-only --output-path target/llvm-cov/full-report.txt
+          cp target/llvm-cov/full-report.txt target/llvm-cov/summary.txt
 
       - name: Render coverage summary
         run: |
-          python - <<'PY' > target/llvm-cov/summary.md
-          from pathlib import Path
-
-          rows = []
-          for line in Path("target/llvm-cov/summary.txt").read_text().splitlines():
-              line = line.strip()
-              if not line or not (line.startswith("/") or line.startswith("TOTAL")):
-                  continue
-
-              parts = line.split()
-              rows.append(
-                  {
-                      "file": parts[0],
-                      "regions": parts[3],
-                      "functions": parts[6],
-                      "lines": parts[9],
-                  }
-              )
-
-          print("## Coverage Summary")
-          print()
-          print("| File | Regions | Functions | Lines |")
-          print("| --- | ---: | ---: | ---: |")
-          for row in rows:
-              print(
-                  f"| `{row['file']}` | {row['regions']} | {row['functions']} | {row['lines']} |"
-              )
-          PY
-
+          python scripts/render_coverage_summary.py > target/llvm-cov/summary.md
           cat target/llvm-cov/summary.md
           {
             cat target/llvm-cov/summary.md
@@ -95,9 +68,6 @@ jobs:
             echo '</details>'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Generate LCOV report
-        run: cargo llvm-cov --workspace --lcov --output-path target/llvm-cov/lcov.info
-
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v6
         with:
@@ -105,4 +75,4 @@ jobs:
           path: |
             target/llvm-cov/summary.md
             target/llvm-cov/summary.txt
-            target/llvm-cov/lcov.info
+            target/llvm-cov/full-report.txt

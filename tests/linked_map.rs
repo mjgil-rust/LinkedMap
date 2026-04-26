@@ -466,6 +466,24 @@ fn into_iterator_for_reference_yields_entries_in_order() {
 }
 
 #[test]
+fn trait_impls_are_exercised_via_ufcs() {
+    let defaulted = <LinkedMap<i32, Item> as Default>::default();
+    assert_eq!(defaulted, empty_linked_map());
+
+    let cloned = <LinkedMap<i32, Item> as Clone>::clone(&two_linked());
+    assert_eq!(cloned, two_linked());
+
+    let collected =
+        <LinkedMap<i32, Item> as FromIterator<(i32, Item)>>::from_iter([(1, value1()), (2, value2())]);
+    assert_eq!(collected, two_linked());
+
+    let entries = <&LinkedMap<i32, Item> as IntoIterator>::into_iter(&collected)
+        .map(|(key, value)| (*key, value.clone()))
+        .collect::<Vec<_>>();
+    assert_eq!(entries, vec![(1, value1()), (2, value2())]);
+}
+
+#[test]
 fn cursor_movement_and_reductions_work_with_non_clone_values() {
     let linked = LinkedMap::from_entries([(1, NonClone("one")), (2, NonClone("two"))]);
 

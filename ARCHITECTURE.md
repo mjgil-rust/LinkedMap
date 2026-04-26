@@ -49,5 +49,5 @@ that change keys or ordering still clone the map structure and order vector.
 
 Coverage is generated with `cargo-llvm-cov`. The repository includes a local
 helper script at `scripts/coverage.sh`, and GitHub Actions runs separate build,
-test, and coverage jobs. The coverage job publishes an LCOV artifact for CI
-inspection.
+test, and coverage jobs. The coverage job publishes an LCOV artifact and renders
+a markdown coverage summary in the workflow output and job summary.

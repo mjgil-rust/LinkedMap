@@ -44,7 +44,8 @@ scripts/coverage.sh html
 ```
 
 The GitHub Actions workflow also runs build, test, and coverage jobs and uploads
-the LCOV report as a workflow artifact.
+the LCOV report as a workflow artifact. The coverage job prints a markdown
+summary in the workflow output and job summary.
 
 ## Architecture
 
